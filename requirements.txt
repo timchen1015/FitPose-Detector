@@ -1,0 +1,6 @@
+tensorflow==2.17.0
+mediapipe==0.10.14
+opencv-python==4.10.0
+numpy==1.26.4
+matplotlib==3.9.2
+h5py==3.12.1

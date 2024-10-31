@@ -172,9 +172,12 @@ class PoseModelTrainer:
             test_loss, test_acc = model.evaluate(X_test, y_test)
             print(f"測試集準確率: {test_acc:.4f}")
             
-            # 保存模型和標籤編碼器
+            # 保存模型為 .h5 格式
             print("\n保存模型...")
-            model.save(os.path.join(self.export_dir, 'lstm_model'))
+            model_path = os.path.join(self.export_dir, 'pose_model.h5')
+            model.save(model_path)
+            
+            # 保存標籤編碼器
             np.save(
                 os.path.join(self.export_dir, 'label_encoder.npy'),
                 self.label_encoder.classes_

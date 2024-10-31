@@ -16,7 +16,9 @@ def load_model_and_labels(model_dir="trained_pose_model"):
     """
     try:
         # 載入模型
-        model = tf.keras.models.load_model(os.path.join(model_dir, 'lstm_model'))
+        model_path = os.path.join(model_dir, 'lstm_model.h5')
+        model = tf.keras.models.load_model(model_path)
+        
         # 載入標籤編碼器
         labels = np.load(os.path.join(model_dir, 'label_encoder.npy'))
         return model, labels
