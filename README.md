@@ -1,19 +1,17 @@
-# 運動姿勢識別系統
+# Exercise Pose Detection System
 
-這是一個基於 MediaPipe 和 LSTM 的運動姿勢識別系統，可以識別不同的運動動作，包括伏地挺身、深蹲和仰臥起坐。
+A real-time exercise pose detection system based on MediaPipe and LSTM, capable of recognizing different exercise movements including push-ups, squats, and sit-ups.
 
-## 功能特點
+## Features
 
-- 即時姿勢識別
-- 支援多種運動動作
-- 使用 LSTM 深度學習模型
-- 即時顯示骨架追蹤
-- 顯示識別結果和置信度
+- Real-time pose detection
+- Support for multiple exercise movements
+- LSTM deep learning model
+- Real-time skeleton tracking
+- Display of recognition results and confidence scores
 
-## 系統需求
+## System Requirements
 
 - Python 3.8+
-- 網路攝像頭
-- GPU（建議但不必要）
-
-## 安裝依賴
+- Webcam
+- GPU (recommended but not required)
