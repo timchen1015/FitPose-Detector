@@ -16,8 +16,9 @@ A real-time exercise pose detection system based on MediaPipe and LSTM, capable 
 pip install -r requirements.txt
 ```
 
-
 ## Project Structure
+
+```bash
 project_root/
 │
 ├── main.py                    # Main program for real-time detection
@@ -41,3 +42,4 @@ project_root/
 ├── sit_up_0.jpg
 ├── sit_up_1.jpg
 └── ...
+```
