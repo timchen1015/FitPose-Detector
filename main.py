@@ -1,8 +1,18 @@
+import os
+# Suppress TensorFlow logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
+# Suppress MediaPipe logging
+os.environ['MEDIAPIPE_DISABLE_GPU'] = '1'
+
 import cv2
 import mediapipe as mp
 import numpy as np
 import tensorflow as tf
-import os
+import logging
+
+# Configure logging
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+logging.getLogger('mediapipe').setLevel(logging.ERROR)
 
 def init_mediapipe():
     mp_drawing = mp.solutions.drawing_utils
@@ -12,23 +22,23 @@ def init_mediapipe():
 
 def load_model_and_labels(model_dir="trained_pose_model"):
     """
-    載入訓練好的模型和標籤
+    Load trained model and labels
     """
     try:
-        # 載入模型
-        model_path = os.path.join(model_dir, 'lstm_model.h5')
+        # Load model
+        model_path = os.path.join(model_dir, 'pose_model.h5')
         model = tf.keras.models.load_model(model_path)
         
-        # 載入標籤編碼器
+        # Load label encoder
         labels = np.load(os.path.join(model_dir, 'label_encoder.npy'))
         return model, labels
     except Exception as e:
-        print(f"載入模型時發生錯誤: {str(e)}")
+        print(f"Error loading model: {str(e)}")
         return None, None
 
 def extract_pose_features(results):
     """
-    從 MediaPipe 結果中提取姿勢特徵
+    Extract pose features from MediaPipe results
     """
     if results.pose_landmarks:
         landmarks = []
@@ -45,7 +55,7 @@ def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, m
     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = holistic.process(frame_rgb)
 
-    # 繪製身體骨架
+    # Draw skeleton
     mp_drawing.draw_landmarks(
         frame,
         results.pose_landmarks,
@@ -53,20 +63,20 @@ def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, m
         landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
     )
 
-    # 進行姿勢識別
+    # Perform pose recognition
     if results.pose_landmarks and model is not None:
-        # 提取特徵
+        # Extract features
         features = extract_pose_features(results)
         if features is not None:
-            # 重塑特徵以符合模型輸入格式
+            # Reshape features to match model input format
             features = features.reshape(1, 1, -1)
             
-            # 進行預測
+            # Make prediction
             prediction = model.predict(features, verbose=0)
             predicted_class = labels[np.argmax(prediction[0])]
             confidence = np.max(prediction[0])
             
-            # 在畫面上顯示預測結果
+            # Display prediction results
             text = f"{predicted_class}: {confidence:.2f}"
             cv2.putText(frame, text, (10, 30), 
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
@@ -74,21 +84,21 @@ def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, m
     return frame
 
 def main():
-    # 初始化 MediaPipe
+    # Initialize MediaPipe
     mp_drawing, mp_drawing_styles, mp_holistic = init_mediapipe()
     
-    # 載入訓練好的模型
+    # Load trained model
     model, labels = load_model_and_labels()
     if model is None:
-        print("無法載入模型，將只顯示骨架追蹤")
+        print("Could not load model, will only show skeleton tracking")
     
-    # 開啟攝像頭
+    # Open camera
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print("無法開啟攝像頭")
+        print("Cannot open camera")
         return
 
-    # 使用 MediaPipe 進行全身偵測
+    # Use MediaPipe for pose detection
     with mp_holistic.Holistic(
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5
@@ -96,10 +106,10 @@ def main():
         while True:
             ret, frame = cap.read()
             if not ret:
-                print("無法接收影像")
+                print("Cannot receive frame")
                 break
 
-            # 處理影像幀
+            # Process frame
             processed_frame = process_frame(
                 frame, 
                 holistic, 
@@ -110,10 +120,10 @@ def main():
                 labels
             )
 
-            # 顯示結果
+            # Show results
             cv2.imshow('Exercise Recognition', processed_frame)
 
-            # 按下 ESC 鍵退出
+            # Press ESC to exit
             if cv2.waitKey(5) == 27:
                 break
 
@@ -121,4 +131,4 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main() 
+    main()
