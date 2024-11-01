@@ -26,7 +26,7 @@ def load_model_and_labels(model_dir="trained_pose_model"):
     """
     try:
         # Load model
-        model_path = os.path.join(model_dir, 'pose_model.h5')
+        model_path = os.path.join(model_dir, 'lstm_mode.h5')
         model = tf.keras.models.load_model(model_path)
         
         # Load label encoder

@@ -185,7 +185,7 @@ class PoseModelTrainer:
             
             # Save model as .h5 format
             print("\nSaving model...")
-            model_path = os.path.join(self.export_dir, 'pose_model.h5')
+            model_path = os.path.join(self.export_dir, 'lstm_model.h5')
             model.save(model_path)
             
             # Save label encoder
