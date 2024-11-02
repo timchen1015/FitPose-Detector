@@ -6,8 +6,9 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow import keras    
+from keras.api.models import Sequential
+from keras.api.layers import LSTM, Dense, Dropout, BatchNormalization
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
@@ -93,7 +94,8 @@ class PoseModelTrainer:
                         y.append(action)
                 except Exception as e:
                     print(f"Error processing image {image_file}: {str(e)}")
-        
+        if len(X) == 0 or len(y) == 0:
+            raise ValueError("No valid pose data found in the dataset.")
         return np.array(X), np.array(y)
 
     def create_lstm_model(self, input_shape, num_classes):
@@ -106,10 +108,13 @@ class PoseModelTrainer:
         """
         model = Sequential([
             LSTM(64, input_shape=input_shape, return_sequences=True),
+            BatchNormalization(),
             Dropout(0.2),
             LSTM(32),
+            BatchNormalization(),
             Dropout(0.2),
             Dense(32, activation='relu'),
+            BatchNormalization(),
             Dropout(0.2),
             Dense(num_classes, activation='softmax')
         ])
