@@ -62,9 +62,45 @@ class PoseModelTrainer:
             
         return None
 
+    # def prepare_dataset(self):
+    #     """
+    #     Prepare training dataset
+        
+    #     Returns:
+    #         Features array and labels array
+    #     """
+    #     X = []  # Features
+    #     y = []  # Labels
+        
+    #     # Iterate through all exercise classes
+    #     for action in os.listdir(self.dataset_path):
+    #         action_path = os.path.join(self.dataset_path, action)
+    #         if not os.path.isdir(action_path):
+    #             continue
+                
+    #         print(f"Processing {action} class data...")
+            
+    #         # Iterate through all images in class
+    #         for image_file in os.listdir(action_path):
+    #             if not image_file.lower().endswith(('.jpg', '.jpeg', '.png')):
+    #                 continue
+                    
+    #             image_path = os.path.join(action_path, image_file)
+    #             try:
+    #                 # Extract pose features
+    #                 features = self.extract_pose_features(image_path)
+    #                 if features is not None:
+    #                     X.append(features)
+    #                     y.append(action)
+    #             except Exception as e:
+    #                 print(f"Error processing image {image_file}: {str(e)}")
+    #     if len(X) == 0 or len(y) == 0:
+    #         raise ValueError("No valid pose data found in the dataset.")
+    #     return np.array(X), np.array(y)
+    
     def prepare_dataset(self):
         """
-        Prepare training dataset
+        Prepare training dataset by processing each video as a sequence of frames.
         
         Returns:
             Features array and labels array
@@ -72,30 +108,49 @@ class PoseModelTrainer:
         X = []  # Features
         y = []  # Labels
         
-        # Iterate through all exercise classes
+        # Iterate through all exercise types (e.g., sit_up, push_up)
         for action in os.listdir(self.dataset_path):
             action_path = os.path.join(self.dataset_path, action)
             if not os.path.isdir(action_path):
                 continue
-                
+                    
             print(f"Processing {action} class data...")
             
-            # Iterate through all images in class
-            for image_file in os.listdir(action_path):
-                if not image_file.lower().endswith(('.jpg', '.jpeg', '.png')):
+            # Iterate through all video folders inside each exercise type
+            for video_folder in os.listdir(action_path):
+                video_path = os.path.join(action_path, video_folder)
+                if not os.path.isdir(video_path):
                     continue
+                
+                print(f"  Processing video: {video_folder}")
+                
+                # Store frames from the current video
+                frames = []
+                for image_file in sorted(os.listdir(video_path)):  # Sort to ensure frames are processed in order
+                    if image_file.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        image_path = os.path.join(video_path, image_file)
+                        try:
+                            # Extract pose features
+                            features = self.extract_pose_features(image_path)
+                            if features is not None:
+                                frames.append(features)
+                        except Exception as e:
+                            print(f"    Error processing image {image_file}: {str(e)}")
+                
+
+                # pad and truncate
+                MAX_SEQUENCE_LENGTH  = 50
+                if len(frames) > 10:                            # Only process videos with sufficient frames
+                    frames = frames[:MAX_SEQUENCE_LENGTH]       # Truncate longer sequences
+                    while len(frames) < MAX_SEQUENCE_LENGTH:
+                        frames.append(np.zeros_like(frames[0])) # Padding with zeros if shorter
                     
-                image_path = os.path.join(action_path, image_file)
-                try:
-                    # Extract pose features
-                    features = self.extract_pose_features(image_path)
-                    if features is not None:
-                        X.append(features)
-                        y.append(action)
-                except Exception as e:
-                    print(f"Error processing image {image_file}: {str(e)}")
+                    X.append(np.array(frames))                  # Store the entire video as a sequence of frames
+                    y.append(action)                            # Label exercise type
+        
         if len(X) == 0 or len(y) == 0:
             raise ValueError("No valid pose data found in the dataset.")
+        
         return np.array(X), np.array(y)
 
     def create_lstm_model(self, input_shape, num_classes):
@@ -127,7 +182,7 @@ class PoseModelTrainer:
         
         return model
 
-    def train_model(self, epochs=50, batch_size=32):
+    def train_model(self, epochs=50, batch_size=8):
         """
         Train pose recognition model
         
@@ -147,7 +202,7 @@ class PoseModelTrainer:
             
             # Reshape data for LSTM input (samples, timesteps, features)
             n_features = 33 * 3  # MediaPipe provides 33 landmarks, each with x, y, z coordinates
-            X_reshaped = X.reshape(len(X), 1, n_features)
+            X_reshaped = X.reshape(len(X), X.shape[1], n_features)
             
             # Split training and test sets
             X_train, X_test, y_train, y_test = train_test_split(
@@ -161,7 +216,7 @@ class PoseModelTrainer:
             
             # Create model
             model = self.create_lstm_model(
-                input_shape=(1, n_features),
+                input_shape=(X_reshaped.shape[1], n_features),  # n_timesteps is X_reshaped.shape[1]
                 num_classes=len(self.label_encoder.classes_)
             )
             
@@ -235,9 +290,9 @@ class PoseModelTrainer:
 
 def main():
     try:
-        DATASET_PATH = "exercise_dataset"
+        DATASET_PATH = "exercise_dataset/image_dataset"
         trainer = PoseModelTrainer(DATASET_PATH)
-        trainer.train_model(epochs=50, batch_size=32)
+        trainer.train_model(epochs=50, batch_size=8)
         print("Training completed!")
         
     except Exception as e:
