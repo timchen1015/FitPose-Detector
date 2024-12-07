@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras    
 from keras.api.models import Sequential
-from keras.api.layers import LSTM, Dense, Dropout, BatchNormalization
+from keras.api.layers import LSTM, Dense, Dropout, BatchNormalization, Attention, Concatenate, Input, GlobalAveragePooling1D
+from keras.api.models import Model
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-
+from albumentations import Compose, GaussianBlur, HorizontalFlip, HueSaturationValue, RandomBrightnessContrast, Rotate, ShiftScaleRotate
 class PoseModelTrainer:
     def __init__(self, dataset_path, export_dir="trained_pose_model"):
         """
@@ -28,7 +29,7 @@ class PoseModelTrainer:
         self.label_encoder = LabelEncoder()
         
         os.makedirs(self.export_dir, exist_ok=True)
-
+    
     def extract_pose_features(self, image_path):
         """
         Extract pose features from image
@@ -58,45 +59,10 @@ class PoseModelTrainer:
                 landmarks = []
                 for landmark in results.pose_landmarks.landmark:
                     landmarks.extend([landmark.x, landmark.y, landmark.z])
+                image = augment_image(image)
                 return np.array(landmarks)
             
         return None
-
-    # def prepare_dataset(self):
-    #     """
-    #     Prepare training dataset
-        
-    #     Returns:
-    #         Features array and labels array
-    #     """
-    #     X = []  # Features
-    #     y = []  # Labels
-        
-    #     # Iterate through all exercise classes
-    #     for action in os.listdir(self.dataset_path):
-    #         action_path = os.path.join(self.dataset_path, action)
-    #         if not os.path.isdir(action_path):
-    #             continue
-                
-    #         print(f"Processing {action} class data...")
-            
-    #         # Iterate through all images in class
-    #         for image_file in os.listdir(action_path):
-    #             if not image_file.lower().endswith(('.jpg', '.jpeg', '.png')):
-    #                 continue
-                    
-    #             image_path = os.path.join(action_path, image_file)
-    #             try:
-    #                 # Extract pose features
-    #                 features = self.extract_pose_features(image_path)
-    #                 if features is not None:
-    #                     X.append(features)
-    #                     y.append(action)
-    #             except Exception as e:
-    #                 print(f"Error processing image {image_file}: {str(e)}")
-    #     if len(X) == 0 or len(y) == 0:
-    #         raise ValueError("No valid pose data found in the dataset.")
-    #     return np.array(X), np.array(y)
     
     def prepare_dataset(self):
         """
@@ -153,27 +119,75 @@ class PoseModelTrainer:
         
         return np.array(X), np.array(y)
 
+    # def create_lstm_model(self, input_shape, num_classes):
+    #     """
+    #     Create LSTM model
+        
+    #     Args:
+    #         input_shape: Shape of input features
+    #         num_classes: Number of classification classes
+    #     """
+    #     model = Sequential([
+    #         LSTM(128, input_shape=input_shape, return_sequences=True),
+    #         BatchNormalization(),
+    #         Dropout(0.3),
+
+    #         LSTM(64, input_shape=input_shape, return_sequences=True),
+    #         BatchNormalization(),
+    #         Dropout(0.3),
+
+    #         Dense(64, activation='relu'),
+    #         BatchNormalization(),
+    #         Dropout(0.3),
+    #         Dense(num_classes, activation='softmax')
+    #     ])
+        
+    #     model.compile(
+    #         optimizer='adam',
+    #         loss='sparse_categorical_crossentropy',
+    #         metrics=['accuracy']
+    #     )
+        
+    #     return model
+
     def create_lstm_model(self, input_shape, num_classes):
         """
-        Create LSTM model
+        Create LSTM model with attention mechanism.
         
         Args:
-            input_shape: Shape of input features
+            input_shape: Shape of input features (timesteps, features)
             num_classes: Number of classification classes
         """
-        model = Sequential([
-            LSTM(64, input_shape=input_shape, return_sequences=True),
-            BatchNormalization(),
-            Dropout(0.2),
-            LSTM(32),
-            BatchNormalization(),
-            Dropout(0.2),
-            Dense(32, activation='relu'),
-            BatchNormalization(),
-            Dropout(0.2),
-            Dense(num_classes, activation='softmax')
-        ])
+        # Input layer
+        inputs = Input(shape=input_shape)
         
+        # First LSTM layer
+        x = LSTM(128, return_sequences=True)(inputs)
+        x = BatchNormalization()(x)
+        x = Dropout(0.3)(x)
+        
+        # Second LSTM layer
+        x = LSTM(64, return_sequences=True)(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.3)(x)
+
+        # Attention mechanism
+        attention = Attention()([x, x])  # Self-attention layer
+        x = Concatenate()([x, attention])  # Combine LSTM output with attention
+        
+        # Fully connected layers
+        x = Dense(64, activation='relu')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.3)(x)
+        
+        # Apply global average pooling to reduce time steps dimension
+        x = GlobalAveragePooling1D()(x)
+        
+        # Output layer
+        outputs = Dense(num_classes, activation='softmax')(x)
+        
+        # Create and compile model
+        model = Model(inputs, outputs)
         model.compile(
             optimizer='adam',
             loss='sparse_categorical_crossentropy',
@@ -182,7 +196,7 @@ class PoseModelTrainer:
         
         return model
 
-    def train_model(self, epochs=50, batch_size=8):
+    def train_model(self, epochs=60, batch_size=8):
         """
         Train pose recognition model
         
@@ -220,10 +234,18 @@ class PoseModelTrainer:
                 num_classes=len(self.label_encoder.classes_)
             )
             
+            # Add ModelCheckpoint to save the best model
+            checkpoint = tf.keras.callbacks.ModelCheckpoint(
+                filepath=os.path.join(self.export_dir, 'best_model.keras'),
+                monitor='val_loss',
+                save_best_only=True,
+                verbose=1
+            )
+
             # Add early stopping
             early_stopping = tf.keras.callbacks.EarlyStopping(
                 monitor='val_loss',
-                patience=10,
+                patience=5,
                 restore_best_weights=True
             )
             
@@ -234,7 +256,7 @@ class PoseModelTrainer:
                 epochs=epochs,
                 batch_size=batch_size,
                 validation_split=0.2,
-                callbacks=[early_stopping],
+                callbacks=[checkpoint, early_stopping],
                 verbose=1
             )
             
@@ -243,9 +265,9 @@ class PoseModelTrainer:
             test_loss, test_acc = model.evaluate(X_test, y_test)
             print(f"Test accuracy: {test_acc:.4f}")
             
-            # Save model as .h5 format
+            # Save model
             print("\nSaving model...")
-            model_path = os.path.join(self.export_dir, 'lstm_model.h5')
+            model_path = os.path.join(self.export_dir, 'lstm_model.keras')
             model.save(model_path)
             
             # Save label encoder
@@ -288,15 +310,34 @@ class PoseModelTrainer:
         plt.savefig(os.path.join(self.export_dir, 'training_history.png'))
         plt.show()
 
+
 def main():
     try:
         DATASET_PATH = "exercise_dataset/image_dataset"
         trainer = PoseModelTrainer(DATASET_PATH)
-        trainer.train_model(epochs=50, batch_size=8)
+        trainer.train_model(epochs=60, batch_size=8)
         print("Training completed!")
         
     except Exception as e:
         print(f"Error occurred: {str(e)}")
+
+def augment_image(image):
+    """
+    Apply image augmentations and return the augmented image.
+    """
+    augmentations = Compose([
+        HorizontalFlip(p=0.5),
+        Rotate(limit=15, p=0.5),
+        RandomBrightnessContrast(p=0.3),
+        ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=20, p=0.5),
+        HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20, p=0.3),
+        GaussianBlur(blur_limit=(3, 7), p=0.3),
+    ])
+
+    if image is None:
+        raise ValueError(f"Cannot read image")
+    augmented = augmentations(image=image)
+    return augmented['image']
 
 if __name__ == "__main__":
     main() 

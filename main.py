@@ -26,7 +26,7 @@ def load_model_and_labels(model_dir="./trained_pose_model"):
     """
     try:
         # Load model
-        model_path = model_dir + "/lstm_model.h5"
+        model_path = model_dir + "/best_model.keras"
         #model_path = os.path.join(model_dir, 'lstm_mode.h5')
         print(model_path)
         model = tf.keras.models.load_model(model_path)
@@ -121,6 +121,8 @@ def main():
                 model,
                 labels
             )
+
+            processed_frame = cv2.resize(processed_frame, (1280, 960)) 
 
             # Show results
             cv2.imshow('Exercise Recognition', processed_frame)
