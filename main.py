@@ -20,17 +20,19 @@ def init_mediapipe():
     mp_holistic = mp.solutions.holistic
     return mp_drawing, mp_drawing_styles, mp_holistic
 
-def load_model_and_labels(model_dir="trained_pose_model"):
+def load_model_and_labels(model_dir="./trained_pose_model"):
     """
     Load trained model and labels
     """
     try:
         # Load model
-        model_path = os.path.join(model_dir, 'lstm_mode.h5')
+        model_path = model_dir + "/lstm_model.h5"
+        #model_path = os.path.join(model_dir, 'lstm_mode.h5')
+        print(model_path)
         model = tf.keras.models.load_model(model_path)
         
         # Load label encoder
-        labels = np.load(os.path.join(model_dir, 'label_encoder.npy'))
+        labels = np.load(model_dir + "/label_encoder.npy")
         return model, labels
     except Exception as e:
         print(f"Error loading model: {str(e)}")
