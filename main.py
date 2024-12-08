@@ -49,7 +49,43 @@ def extract_pose_features(results):
         return np.array(landmarks)
     return None
 
-def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, model, labels):
+# def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, model, labels, feature_buffer):
+#     if frame is None:
+#         return None
+    
+#     frame = cv2.resize(frame, (520, 300))
+#     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#     results = holistic.process(frame_rgb)
+
+#     # Draw skeleton
+#     mp_drawing.draw_landmarks(
+#         frame,
+#         results.pose_landmarks,
+#         mp_holistic.POSE_CONNECTIONS,
+#         landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
+#     )
+
+#     # Perform pose recognition
+#     if results.pose_landmarks and model is not None:
+#         # Extract features
+#         features = extract_pose_features(results)
+#         if features is not None:
+#             # Reshape features to match model input format
+#             features = features.reshape(1, 1, -1)
+            
+#             # Make prediction
+#             prediction = model.predict(features, verbose=0)
+#             predicted_class = labels[np.argmax(prediction[0])]
+#             confidence = np.max(prediction[0])
+            
+#             # Display prediction results
+#             text = f"{predicted_class}: {confidence:.2f}"
+#             cv2.putText(frame, text, (10, 30), 
+#                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
+#     return frame
+
+def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, model, labels, feature_buffer, sequence_length=50):
     if frame is None:
         return None
     
@@ -70,18 +106,29 @@ def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, m
         # Extract features
         features = extract_pose_features(results)
         if features is not None:
-            # Reshape features to match model input format
-            features = features.reshape(1, 1, -1)
-            
-            # Make prediction
-            prediction = model.predict(features, verbose=0)
-            predicted_class = labels[np.argmax(prediction[0])]
-            confidence = np.max(prediction[0])
-            
-            # Display prediction results
-            text = f"{predicted_class}: {confidence:.2f}"
-            cv2.putText(frame, text, (10, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            print(f"Extracted features: {features.shape}")
+            feature_buffer.append(features)
+
+            # Maintain buffer size
+            if len(feature_buffer) > sequence_length:
+                feature_buffer.pop(0)
+
+            # Make a prediction if the buffer is full
+            print(f"Feature buffer length: {len(feature_buffer)}")
+            if len(feature_buffer) == sequence_length:
+                input_features = np.array(feature_buffer).reshape(1, sequence_length, -1)
+                print(f"Input features shape: {input_features.shape}")
+                prediction = model.predict(input_features, verbose=0)
+                print(f"Prediction: {prediction}")
+
+                predicted_class = labels[np.argmax(prediction[0])]
+                confidence = np.max(prediction[0])
+
+                # Display prediction results
+                text = f"{predicted_class}: {confidence:.2f}"
+                print(f"Displaying on frame: {text}")
+                cv2.putText(frame, text, (10, 30), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     return frame
 
@@ -100,6 +147,7 @@ def main():
         print("Cannot open camera")
         return
 
+    feature_buffer = []
     # Use MediaPipe for pose detection
     with mp_holistic.Holistic(
         min_detection_confidence=0.5,
@@ -119,7 +167,8 @@ def main():
                 mp_drawing_styles, 
                 mp_holistic,
                 model,
-                labels
+                labels,
+                feature_buffer
             )
 
             processed_frame = cv2.resize(processed_frame, (1280, 960)) 
