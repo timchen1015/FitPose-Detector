@@ -49,42 +49,6 @@ def extract_pose_features(results):
         return np.array(landmarks)
     return None
 
-# def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, model, labels, feature_buffer):
-#     if frame is None:
-#         return None
-    
-#     frame = cv2.resize(frame, (520, 300))
-#     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#     results = holistic.process(frame_rgb)
-
-#     # Draw skeleton
-#     mp_drawing.draw_landmarks(
-#         frame,
-#         results.pose_landmarks,
-#         mp_holistic.POSE_CONNECTIONS,
-#         landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
-#     )
-
-#     # Perform pose recognition
-#     if results.pose_landmarks and model is not None:
-#         # Extract features
-#         features = extract_pose_features(results)
-#         if features is not None:
-#             # Reshape features to match model input format
-#             features = features.reshape(1, 1, -1)
-            
-#             # Make prediction
-#             prediction = model.predict(features, verbose=0)
-#             predicted_class = labels[np.argmax(prediction[0])]
-#             confidence = np.max(prediction[0])
-            
-#             # Display prediction results
-#             text = f"{predicted_class}: {confidence:.2f}"
-#             cv2.putText(frame, text, (10, 30), 
-#                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-
-#     return frame
-
 def process_frame(frame, holistic, mp_drawing, mp_drawing_styles, mp_holistic, model, labels, feature_buffer, sequence_length=50):
     if frame is None:
         return None
