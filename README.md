@@ -3,6 +3,7 @@
 A real-time exercise pose detection system based on MediaPipe and LSTM, capable of recognizing different exercise movements including push-ups, squats, and sit-ups.
 
 [![FitPose Detector Demo](https://img.youtube.com/vi/UjlId3CEh6U/0.jpg)](https://youtu.be/UjlId3CEh6U?si=oL9TPSlOcomv-AIG)
+
 *Click on the image above to watch the demo video*
 
 ![Training Performance](https://github.com/timchen1015/FitPose-Detector/raw/main/trained_pose_model/training_history.png)
