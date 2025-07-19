@@ -83,14 +83,29 @@ def extract_frames_from_all_videos(input_folder, output_base_folder, fps=10):
             extract_frames_from_video(video_path, output_dir, fps)
 
 if __name__ == "__main__":
-    # Ensure base directories exist
-    os.makedirs('./image_dataset/push_up', exist_ok=True)
-    os.makedirs('./image_dataset/sit_up', exist_ok=True)
-    os.makedirs('./image_dataset/squat', exist_ok=True)
+    # Get the current script directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    extract_frames_from_all_videos('./video_dataset/push_up_video', './image_dataset/push_up')
+    # Define paths relative to exercise_dataset directory
+    push_up_video_dir = os.path.join(script_dir, 'video_dataset', 'push_up_video')
+    sit_up_video_dir = os.path.join(script_dir, 'video_dataset', 'sit_up_video')
+    squat_video_dir = os.path.join(script_dir, 'video_dataset', 'squat_video')
+    
+    # Create image_dataset inside exercise_dataset directory
+    image_dataset_dir = os.path.join(script_dir, 'image_dataset')
+    push_up_output_dir = os.path.join(image_dataset_dir, 'push_up')
+    sit_up_output_dir = os.path.join(image_dataset_dir, 'sit_up')
+    squat_output_dir = os.path.join(image_dataset_dir, 'squat')
+    
+    # Ensure base directories exist
+    os.makedirs(push_up_output_dir, exist_ok=True)
+    os.makedirs(sit_up_output_dir, exist_ok=True)
+    os.makedirs(squat_output_dir, exist_ok=True)
+    
+    # Process videos
+    extract_frames_from_all_videos(push_up_video_dir, push_up_output_dir)
     print("push_up done")
-    extract_frames_from_all_videos('./video_dataset/sit_up_video', './image_dataset/sit_up')
+    extract_frames_from_all_videos(sit_up_video_dir, sit_up_output_dir)
     print("sit_up done")
-    extract_frames_from_all_videos('./video_dataset/squat_video', './image_dataset/squat')
+    extract_frames_from_all_videos(squat_video_dir, squat_output_dir)
     print("squat done")
