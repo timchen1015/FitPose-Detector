@@ -4,7 +4,7 @@ exercise_dataset/img_dataset/
 exercise_dataset/video_dataset/
 
 # Keep scripts in dataset folders
-!exercise_dataset/video_dataset/extract_video.py
+!exercise_dataset/extract_video.py
 
 # Python
 __pycache__/
