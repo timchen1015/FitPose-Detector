@@ -131,7 +131,6 @@ This script will:
 You can also use your own exercise videos:
 - Place your videos in the corresponding folders under `exercise_dataset/video_dataset/`
 - Run the extraction script to process your videos
-- The image frames dataset is not included due to its large size (~20GB)
 
 ### Training the Model
 
