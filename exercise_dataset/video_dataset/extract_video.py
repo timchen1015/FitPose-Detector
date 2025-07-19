@@ -70,6 +70,9 @@ def extract_frames_from_all_videos(input_folder, output_base_folder, fps=10):
         output_base_folder (str): Base folder to save extracted frames.
         fps (int): Frames per second to extract.
     """
+    # Create output base folder if it doesn't exist
+    os.makedirs(output_base_folder, exist_ok=True)
+    
     # Loop through all files in the input folder
     for video_file in os.listdir(input_folder):
         if video_file.endswith(".mp4"):
@@ -80,6 +83,11 @@ def extract_frames_from_all_videos(input_folder, output_base_folder, fps=10):
             extract_frames_from_video(video_path, output_dir, fps)
 
 if __name__ == "__main__":
+    # Ensure base directories exist
+    os.makedirs('./exercise_dataset/image_dataset/push_up', exist_ok=True)
+    os.makedirs('./exercise_dataset/image_dataset/sit_up', exist_ok=True)
+    os.makedirs('./exercise_dataset/image_dataset/squat', exist_ok=True)
+    
     extract_frames_from_all_videos('./exercise_dataset/video_dataset/push_up_video', './exercise_dataset/image_dataset/push_up')
     print("push_up done")
     extract_frames_from_all_videos('./exercise_dataset/video_dataset/sit_up_video', './exercise_dataset/image_dataset/sit_up')
